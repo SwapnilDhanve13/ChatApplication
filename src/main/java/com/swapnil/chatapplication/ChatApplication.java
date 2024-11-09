@@ -1,16 +1,14 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- */
-
 package com.swapnil.chatapplication;
 
 /**
  *
- * @author Admin
+ * @author Swapnil
  */
 public class ChatApplication {
-
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        // Launch the ChatClientGUI
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            new ChatClientGUI().setVisible(true);
+        });
     }
 }
