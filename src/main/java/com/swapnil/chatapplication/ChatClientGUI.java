@@ -1,105 +1,128 @@
- package com.swapnil.chatapplication;
+package com.swapnil.chatapplication;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
-import java.text.SimpleDateFormat; 
-import java.util.Date; 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
-/**
- *
- * @author Admin
- */
 public class ChatClientGUI extends JFrame {
     private JTextArea messageArea;
     private JTextField textField;
-    private JButton exitButton;
+    private JList<String> userList;
+    private DefaultListModel<String> userListModel;
+    private JButton exitButton, emojiPanelButton;
+    private JPanel emojiPanel;
     private ChatClient client;
     private String name;
 
     public ChatClientGUI() {
         super("Chat Application");
-        setSize(400, 500);
+        setSize(600, 500);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        
-        Color backgroundColor = new Color(240, 240, 240); // Light gray background
-        Color buttonColor = new Color(75, 75, 75); // Darker gray for buttons
-        Color textColor = new Color(50, 50, 50); // Almost black for text
-        Font textFont = new Font("Arial", Font.PLAIN, 14);
-        Font buttonFont = new Font("Arial", Font.BOLD, 12);
 
+        // Layout setup
         messageArea = new JTextArea();
         messageArea.setEditable(false);
-        messageArea.setBackground(backgroundColor);
-        messageArea.setForeground(textColor);
-        messageArea.setFont(textFont);
         add(new JScrollPane(messageArea), BorderLayout.CENTER);
 
-        textField = new JTextField();
+        userListModel = new DefaultListModel<>();
+        userList = new JList<>(userListModel);
+        JScrollPane pane = new JScrollPane(userList);
+        pane.setSize(150, 250);
+        add(pane, BorderLayout.EAST);
 
-        // Prompt for user name
-        name = JOptionPane.showInputDialog(this, "Enter your name:", "Name Entry", JOptionPane.PLAIN_MESSAGE);
-        this.setTitle("Chat Application - " + name); // Set window title to include user name
-        
         textField = new JTextField();
-        textField.setFont(textFont);
-        textField.setForeground(textColor);
-        textField.setBackground(backgroundColor);
-
-        // Modify actionPerformed to include the user name and time stamp
         textField.addActionListener(e -> {
-            String message = "[" + new SimpleDateFormat("HH:mm:ss").format(new Date()) + "] " + name + ": " + textField.getText();
-            client.sendMessage(message);
+            String input = textField.getText().trim();
+
+            // Sending the input directly if it's a private message
+            if (input.startsWith("/msg ")) {
+                client.sendMessage(input);
+            } else {
+                // Formatting and sending regular chat messages
+                String message = "[" + new SimpleDateFormat("HH:mm:ss").format(new Date()) + "] " + name + ": " + input;
+                client.sendMessage(message);
+            }
+
             textField.setText("");
         });
 
-        // Initialize the exit button
+        // Initializing the emoji panel and buttons
+        emojiPanel = new JPanel(new GridLayout(8, 2));
+        emojiPanel.add(createEmojiButton("😊"));
+        emojiPanel.add(createEmojiButton("😂"));
+        emojiPanel.add(createEmojiButton("😒"));
+        emojiPanel.add(createEmojiButton("❤️"));
+        emojiPanel.add(createEmojiButton("🔥️"));
+        emojiPanel.add(createEmojiButton("😍️"));
+        emojiPanel.add(createEmojiButton("👌"));
+        emojiPanel.add(createEmojiButton("👍"));
+        emojiPanel.add(createEmojiButton("😱"));
+        
+
+        emojiPanel.setVisible(false);
+        add(emojiPanel, BorderLayout.WEST); // Added to the main frame, not in the bottom panel
+
+        emojiPanelButton = new JButton("Emojis");
+        emojiPanelButton.addActionListener(e -> emojiPanel.setVisible(!emojiPanel.isVisible()));
+
+        // Initializing the exit button
         exitButton = new JButton("Exit");
-        exitButton.setFont(buttonFont);
-        exitButton.setBackground(buttonColor);
-        exitButton.setForeground(Color.WHITE);
         exitButton.addActionListener(e -> {
-            // Send a departure message to the server
-            String departureMessage = name + " has left the chat.";
-            client.sendMessage(departureMessage);
-
-            // Delay to ensure the message is sent before exiting
-            try {
-                Thread.sleep(1000); // Wait for 1 second to ensure message is sent
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-            }
-
-            // Exit the application
+            client.disconnect(); // Notify the server and close connection
             System.exit(0);
         });
 
-        // Create a bottom panel for the text field and exit button
+        // Bottom panel setup
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.setBackground(backgroundColor);
+        bottomPanel.add(emojiPanelButton, BorderLayout.WEST);
         bottomPanel.add(textField, BorderLayout.CENTER);
         bottomPanel.add(exitButton, BorderLayout.EAST);
         add(bottomPanel, BorderLayout.SOUTH);
 
-        // Initialize and start the ChatClient
+        // Initialize client
         try {
-            this.client = new ChatClient("127.0.0.1", 5000, this::onMessageReceived);
+            // Request the user's name
+            name = JOptionPane.showInputDialog(this, "Enter your name:", "Name Entry", JOptionPane.PLAIN_MESSAGE);
+
+            // If the user input is null or empty, ask again or close the application
+            if (name == null || name.trim().isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Name cannot be empty. Exiting.", "Invalid Name", JOptionPane.ERROR_MESSAGE);
+                System.exit(1);
+            }
+
+            this.setTitle("Chat Application - " + name);
+            client = new ChatClient("127.0.0.1", 5000, this::onMessageReceived, this::onUserListReceived);
+            client.sendUserName(name);
             client.startClient();
         } catch (IOException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "Error connecting to the server", "Connection error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error connecting to the server", "Connection error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
         }
+    }
+
+    private JButton createEmojiButton(String emoji) {
+        JButton button = new JButton(emoji);
+        button.addActionListener(e -> textField.setText(textField.getText() + emoji));
+        return button;
     }
 
     private void onMessageReceived(String message) {
         SwingUtilities.invokeLater(() -> messageArea.append(message + "\n"));
     }
 
-    public static void main(String[] args) {
+    private void onUserListReceived(String[] users) {
         SwingUtilities.invokeLater(() -> {
-            new ChatClientGUI().setVisible(true);
+            userListModel.clear();
+            for (String user : users) {
+                userListModel.addElement(user);
+            }
         });
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new ChatClientGUI().setVisible(true));
     }
 }
