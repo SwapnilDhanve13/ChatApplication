@@ -70,7 +70,23 @@ Emojis: Click the Emojis button to open the emoji panel and add emojis to your m
 Exit: Use the Exit button to leave the chat gracefully.
 
 ### Screenshots
-![
+* Turned the Server On:
+![# Server On](https://github.com/SwapnilDhanve13/ChatApplication/blob/main/src/images/Chat%20Application%20srcs1.png)
+* User name getting window:
+  
+![# Server On](https://github.com/SwapnilDhanve13/ChatApplication/blob/main/src/images/Chat%20Application%20srcs2.png)
+* User Interface
+  
+![# Server On](https://github.com/SwapnilDhanve13/ChatApplication/blob/main/src/images/Chat%20Application%20srcs3.png)
+* User List
+  
+![# Server On](https://github.com/SwapnilDhanve13/ChatApplication/blob/main/src/images/Chat%20Application%20srcs4.png)
+* Emojies Option (click on Emojies Button to Open & Close)
+  
+![# Server On](https://github.com/SwapnilDhanve13/ChatApplication/blob/main/src/images/Chat%20Application%20srcs5.png)
+* Sending Files
+  
+![# Server On](https://github.com/SwapnilDhanve13/ChatApplication/blob/main/src/images/Chat%20Application%20srcs6.png)
 
 ### Future Enhancements
 * File Preview: Show file previews for certain file types before downloading.
