@@ -2,6 +2,7 @@ package com.swapnil.chatapplication;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -11,7 +12,7 @@ public class ChatClientGUI extends JFrame {
     private JTextField textField;
     private JList<String> userList;
     private DefaultListModel<String> userListModel;
-    private JButton exitButton, emojiPanelButton;
+    private JButton exitButton, emojiPanelButton, fileButton;
     private JPanel emojiPanel;
     private ChatClient client;
     private String name;
@@ -66,6 +67,9 @@ public class ChatClientGUI extends JFrame {
 
         emojiPanelButton = new JButton("Emojis");
         emojiPanelButton.addActionListener(e -> emojiPanel.setVisible(!emojiPanel.isVisible()));
+        
+        fileButton = new JButton("Send File");
+        fileButton.addActionListener(e -> sendFile());
 
         // Initializing the exit button
         exitButton = new JButton("Exit");
@@ -73,12 +77,16 @@ public class ChatClientGUI extends JFrame {
             client.disconnect(); // Notify the server and close connection
             System.exit(0);
         });
+        
+        JPanel lPanel = new JPanel(new BorderLayout());
+        lPanel.add(fileButton,BorderLayout.EAST);
+        lPanel.add(exitButton,BorderLayout.WEST);
 
         // Bottom panel setup
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.add(emojiPanelButton, BorderLayout.WEST);
         bottomPanel.add(textField, BorderLayout.CENTER);
-        bottomPanel.add(exitButton, BorderLayout.EAST);
+        bottomPanel.add(lPanel, BorderLayout.EAST);
         add(bottomPanel, BorderLayout.SOUTH);
 
         // Initialize client
@@ -100,6 +108,21 @@ public class ChatClientGUI extends JFrame {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this, "Error connecting to the server", "Connection error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
+        }
+    }
+    
+    private void sendFile() {
+        JFileChooser fileChooser = new JFileChooser();
+        int returnValue = fileChooser.showOpenDialog(this);
+        if (returnValue == JFileChooser.APPROVE_OPTION) {
+            File selectedFile = fileChooser.getSelectedFile();
+            try {
+                client.sendFile(selectedFile);
+                messageArea.append("File sent: " + selectedFile.getName() + "\n");
+            } catch (IOException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Error sending file", "File Transfer Error", JOptionPane.ERROR_MESSAGE);
+            }
         }
     }
 

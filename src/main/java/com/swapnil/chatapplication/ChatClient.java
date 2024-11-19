@@ -10,12 +10,16 @@ public class ChatClient {
     private PrintWriter out;
     private Consumer<String> onMessageReceived;
     private Consumer<String[]> onUserListReceived;
+    private DataInputStream infile;
+    private DataOutputStream outfile;
     private String name; // name field
 
     public ChatClient(String serverAddress, int serverPort, Consumer<String> onMessageReceived, Consumer<String[]> onUserListReceived) throws IOException {
         this.socket = new Socket(serverAddress, serverPort);
         this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.out = new PrintWriter(socket.getOutputStream(), true);
+        this.infile = new DataInputStream(socket.getInputStream());
+        this.outfile = new DataOutputStream(socket.getOutputStream());
         this.onMessageReceived = onMessageReceived;
         this.onUserListReceived = onUserListReceived;
     }
@@ -43,6 +47,26 @@ public class ChatClient {
             e.printStackTrace();
         }
         Thread.currentThread().interrupt();
+    }
+    
+    public void sendFile(File file) throws IOException {
+        // Notify the server that a file transfer is starting
+        outfile.writeUTF("FILE_TRANSFER: " + file.getName());
+        outfile.writeUTF(" ");
+        outfile.flush(); // Ensure the message is sent immediately
+
+        try (FileInputStream fileInputStream = new FileInputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = fileInputStream.read(buffer)) != -1) {
+                outfile.write(buffer, 0, bytesRead);
+                outfile.flush(); // Send the bytes to the server
+            }
+            System.out.println("File sent successfully: " + file.getName());
+        } catch (IOException e) {
+            System.err.println("Failed to send file: " + e.getMessage());
+            throw e; // Rethrow to allow external handling if needed
+        }
     }
 
     public void startClient() {

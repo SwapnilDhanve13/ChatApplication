@@ -42,6 +42,9 @@ class ClientHandler implements Runnable {
     private Map<String, ClientHandler> userMap;
     private PrintWriter out;
     private BufferedReader in;
+    private DataInputStream infile;
+    private DataOutputStream outfile;
+    private boolean isActive;
     private String userName;
 
     public ClientHandler(Socket socket, List<ClientHandler> clients, Map<String, ClientHandler> userMap) throws IOException {
@@ -50,7 +53,11 @@ class ClientHandler implements Runnable {
         this.userMap = userMap;
         this.out = new PrintWriter(clientSocket.getOutputStream(), true);
         this.in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+        this.infile = new DataInputStream(socket.getInputStream());
+        this.outfile = new DataOutputStream(socket.getOutputStream());
+        this.isActive = true;
     }
+
     @Override
     public void run() {
         try {
@@ -60,17 +67,17 @@ class ClientHandler implements Runnable {
                     userName = inputLine.substring(10);
                     System.out.println(userName + " has joined the chat.");
                     ChatServer.addUser(userName, this);
-                    broadcast(userName + " has joined the chat.");
+                    broadcast(userName + " has joined the chat.", this);
                     ChatServer.broadcastUserList();
                 } else if (inputLine.startsWith("USER_LEFT:")) {
                     handleUserLeft();
                     break;
                 } else if (inputLine.startsWith("/msg ")) {
-                    System.out.println("privately");
                     handlePrivateMessage(inputLine);
+                } else if (inputLine.startsWith("FILE_TRANSFER:")) {
+                    handleFileTransfer(inputLine.substring(14));
                 } else {
-                    System.out.println("msg");
-                    broadcast(inputLine);
+                    broadcast(inputLine, this);
                 }
             }
         } catch (IOException e) {
@@ -80,11 +87,40 @@ class ClientHandler implements Runnable {
         }
     }
 
+    private void handleFileTransfer(String fileName) throws IOException {
+        System.out.println(userName + " is sending a file: " + fileName);
+
+        // Create a new file to save the incoming data
+        File file = new File("received_" + fileName);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            byte[] buffer = new byte[4096];
+            int bytesRead;
+            while ((bytesRead = infile.read(buffer)) > 0) {
+                fos.write(buffer, 0, bytesRead);
+                // Break if end of the file transfer is detected
+                if (bytesRead < buffer.length) {
+                    break;
+                }
+            }
+        }
+
+        // Notify clients that a file was sent
+        broadcast(userName + " sent a file: " + fileName + "/n", this);
+        System.out.println("File received and saved as " + file.getAbsolutePath());
+    }
+
+    public void sendMessage(String message) throws IOException {
+        if (isActive) {
+            outfile.writeUTF(message);
+            outfile.flush();
+        }
+    }
+
     private void handleUserLeft() throws IOException {
         System.out.println(userName + " has left the chat.");
         clients.remove(this);
         ChatServer.removeUser(userName);
-        broadcast(userName + " has left the chat.");
+        broadcast(userName + " has left the chat.", this);
         ChatServer.broadcastUserList();
     }
 
@@ -105,7 +141,7 @@ class ClientHandler implements Runnable {
         }
     }
 
-    private void broadcast(String message) {
+    private void broadcast(String message, ClientHandler sender) {
         for (ClientHandler client : clients) {
             client.out.println(message);
         }
